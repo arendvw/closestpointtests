@@ -71,6 +71,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="KdTreeClosestpoint.cs" />
+    <Compile Include="RtreeClosestpointHackFix.cs" />
     <Compile Include="RtreeClosestpoint.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

@@ -8,13 +8,13 @@ using Rhino.Geometry;
 
 namespace GrasshopperClosestPointComparison
 {
-    public class RtreeClosestpoint : GH_Component
+    public class RtreeClosestpointHackFix : GH_Component
     {
-        public RtreeClosestpoint() : base("RTreeCp", "RTreeCp", "RTreeCp", "TreeComparison", "Comparison")
+        public RtreeClosestpointHackFix() : base("RTreeCpHackFix", "RTreeCpHackFix", "RTreeCpHackFix", "TreeComparison", "Comparison")
         {
 
         }
-        public override Guid ComponentGuid => new Guid("{CF3976F5-1A07-4AB2-8AF6-293B053640AC}");
+        public override Guid ComponentGuid => new Guid("{657967B8-B6A0-483E-827B-023C89290D5B}");
         protected override void RegisterInputParams(GH_InputParamManager pManager)
         {
             pManager.AddPointParameter("Points", "P", "Points to search from", GH_ParamAccess.list);
@@ -41,8 +41,10 @@ namespace GrasshopperClosestPointComparison
                 return;
             }
 
+            var useCount = Math.Max(count, 5);
+            var postProcess = count < useCount;
 
-            var result = RTree.Point3dKNeighbors(inputCloud, inputPts, count);
+            var result = RTree.Point3dKNeighbors(inputCloud, inputPts, useCount);
             var outPts = new GH_Structure<GH_Point>();
             var outIdx = new GH_Structure<GH_Integer>();
 
@@ -50,8 +52,23 @@ namespace GrasshopperClosestPointComparison
             foreach (var foundIdx in result)
             {
                 var path = new GH_Path(branchIdx);
-                outPts.AppendRange(foundIdx.Select(idx => new GH_Point(inputCloud[idx])), path);
-                //outIdx.AppendRange(foundIdx.Select(idx => new GH_Integer(idx)), path);
+                var pts = foundIdx.Select(idx => new GH_Point(inputCloud[idx]));
+
+                if (postProcess)
+                {
+                    var localBranchIdx = branchIdx;
+                    pts = foundIdx.Select(idx =>
+                        new
+                        {
+                            Point = inputCloud[idx],
+                            DistanceSquared = inputPts[idx].DistanceToSquared(inputCloud[localBranchIdx])
+                        })
+                        .OrderBy(pt => pt.DistanceSquared)
+                        .Select(pt => new GH_Point(pt.Point))
+                        .Take(count);
+                }
+
+                outPts.AppendRange(pts, path);
                 branchIdx++;
             }
 
